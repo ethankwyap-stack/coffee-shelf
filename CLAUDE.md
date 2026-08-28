@@ -17,7 +17,19 @@ The API returns `{role, bags}`; the UI hides Add/Edit when role is `view`.
 `vercel --prod` from the project root.
 
 ## Gotchas
-- Blob reads must bust the CDN cache with `?v=Date.now()` or you get stale data.
+- The blob is **private** (`access:'private'`). Read it with `get(BLOB,{access:'private',useCache:false})`
+  — `useCache:false` is what makes a save visible on the next read. Do NOT add `?v=Date.now()`
+  cache-busting; that was the old public-blob pattern and does not apply here.
+- Never assign `document.onkeydown = e => cond && fn()`. An arrow function returning
+  `false` cancels the key event, which silently blocks ALL typing in every input.
+  Use `addEventListener` with a braced body.
+- The edit key is stored in `localStorage.shelfkey` and stripped from the URL after load.
+  A test that opens the page twice will still be authenticated — clear localStorage to
+  test the locked state.
+- Every PUT writes a dated copy to `backups/` in the blob store (last 10 kept) and
+  **refuses an empty array** when bags exist. Use `?force=1` to clear the shelf on purpose.
+- `save()` rolls the UI back and shows a red toast if the write fails. Any new code that
+  changes `BAGS` must go through `save()`, never fetch the API directly.
 - Photos are stored as base64 inside `bags.json`, shrunk client-side to 700px JPEG.
   If the shelf grows past ~100 bags with photos, move photos to their own blobs.
 - `bags.json` is gitignored and vercelignored — it is data, not source.

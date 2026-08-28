@@ -138,6 +138,7 @@ label{display:block; font-size:10px; letter-spacing:.2em; text-transform:upperca
 .toast{position:fixed; z-index:60; bottom:26px; left:50%; transform:translateX(-50%);
   background:var(--amber); color:#160c02; font-weight:700; font-size:13px; padding:11px 20px; border-radius:99px;
   box-shadow:0 10px 34px -10px rgba(255,95,31,.9)}
+.toast.bad{background:#c02626; color:#fff; box-shadow:0 10px 34px -10px rgba(192,38,38,.9)}
 footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--line); color:var(--faint); font-size:12px}
 @media(max-width:560px){.grid2{grid-template-columns:1fr}.stats{gap:24px}}
 </style>
@@ -175,7 +176,15 @@ footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--line); colo
 </div>
 
 <script>
-const KEY = new URLSearchParams(location.search).get('k') || '';
+// The key comes from the link once, then lives in this browser only.
+// It is stripped from the address bar so screenshots never leak it.
+const KEY = (() => {
+  const fromUrl = new URLSearchParams(location.search).get('k');
+  try {
+    if (fromUrl) { localStorage.setItem('shelfkey', fromUrl); return fromUrl; }
+    return localStorage.getItem('shelfkey') || '';
+  } catch (e) { return fromUrl || ''; }   // private window: fall back to the URL
+})();
 let ROLE = 'view', BAGS = [];
 const $ = s => document.querySelector(s);
 const DOSE = b => +b.dose || 18;   // grams used per brew
@@ -200,11 +209,16 @@ const stars = r => r ? '★'.repeat(r) + '☆'.repeat(5-r) : '';
 async function load(){
   if (!KEY) return locked('This shelf needs a link with a key. Ask Ethan for one.');
   const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY));
-  if (!r.ok) return locked('That key is not valid.');
+  if (!r.ok) {
+    try { localStorage.removeItem('shelfkey'); } catch (e) {}
+    return locked('That key is not valid. Open your link again.');
+  }
   const d = await r.json();
   ROLE = d.role; BAGS = d.bags || [];
   if (ROLE !== 'edit') { $('#add').style.display='none'; $('#kicker').textContent = 'Shared shelf · read only'; }
   render();
+  if (new URLSearchParams(location.search).get('k'))
+    history.replaceState(null, '', location.pathname + location.hash);
   if (location.hash.startsWith('#bag=')) {
     const b = BAGS.find(x => x.id === location.hash.slice(5));
     if (b) view(b);
@@ -214,11 +228,41 @@ function locked(msg){
   $('#shelf').innerHTML = '<div class="empty">'+esc(msg)+'</div>';
   $('#add').style.display='none'; $('#share').style.display='none';
 }
+// Any change is rolled back on screen if the server did not take it,
+// so the number you see is always the number that is stored.
 async function save(){
-  const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY), {
-    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(BAGS)
-  });
-  if (!r.ok) return toast('Save failed');
+  const snapshot = JSON.stringify(BAGS);
+  try {
+    const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY), {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: snapshot
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    render();
+    return true;
+  } catch (e) {
+    const again = await retrySave(snapshot);
+    if (again) { render(); return true; }
+    await reload();                       // put the screen back to what is stored
+    toast('NOT SAVED \u2014 check your connection', false, true);
+    return false;
+  }
+}
+// One quiet retry after a second. Most failures are a blip.
+function retrySave(body){
+  return new Promise(res => setTimeout(async () => {
+    try {
+      const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY), {
+        method:'PUT', headers:{'Content-Type':'application/json'}, body
+      });
+      res(r.ok);
+    } catch (e) { res(false); }
+  }, 1000));
+}
+async function reload(){
+  try {
+    const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY));
+    if (r.ok) { const d = await r.json(); BAGS = d.bags || []; }
+  } catch (e) {}
   render();
 }
 // One tap = one brew off the bag. Always undoable.
@@ -243,12 +287,12 @@ function undoPour(){
   _undo = null; toast('Undone');
 }
 
-function toast(m, undo){
+function toast(m, undo, bad){
   document.querySelectorAll('.toast').forEach(x => x.remove());
-  const t = document.createElement('div'); t.className='toast'; t.textContent=m;
+  const t = document.createElement('div'); t.className='toast' + (bad ? ' bad' : ''); t.textContent=m;
   if (undo) { const u = document.createElement('button'); u.textContent = 'Undo';
     u.onclick = () => { t.remove(); undoPour(); }; t.appendChild(u); }
-  document.body.appendChild(t); setTimeout(() => t.remove(), undo ? 5000 : 2200);
+  document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 6000 : undo ? 5000 : 2200);
 }
 
 function visible(){
