@@ -21,3 +21,6 @@ The API returns `{role, bags}`; the UI hides Add/Edit when role is `view`.
 - Photos are stored as base64 inside `bags.json`, shrunk client-side to 700px JPEG.
   If the shelf grows past ~100 bags with photos, move photos to their own blobs.
 - `bags.json` is gitignored and vercelignored — it is data, not source.
+- Never assign `document.onkeydown = e => cond && fn()`. An arrow function returning
+  `false` cancels the key event, which silently blocks ALL typing in every input.
+  Use `addEventListener` with a braced body.
