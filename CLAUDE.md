@@ -1,5 +1,7 @@
 # Coffee Shelf
 
+Live: https://coffee-shelf-smoky.vercel.app
+
 Personal coffee-bag tracker. `~/coffee-shelf`. Zero cost.
 
 ## Stack

@@ -1,5 +1,7 @@
 # Coffee Shelf
 
+Live: https://coffee-shelf-smoky.vercel.app
+
 Track every bag of coffee you own — roaster, size, roast date, freshness, tasting
 notes, price per gram, how much is left, and your rating.
 
@@ -14,7 +16,7 @@ Two secret keys, set as Vercel environment variables:
 | Owner key | `EDIT_KEY` | Read + add + edit + delete |
 | Family key | `VIEW_KEY` | Read only |
 
-Access is by URL: `https://your-site.vercel.app/?k=<key>`.
+Access is by URL: `https://coffee-shelf-smoky.vercel.app/?k=<key>`.
 No key = no data. Random visitors see a locked page.
 
 Each bag also has its own link: `?k=<key>#bag=<id>` — the "Copy link to this bag" button.
