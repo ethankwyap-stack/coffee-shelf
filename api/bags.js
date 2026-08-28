@@ -1,4 +1,4 @@
-const { put, list } = require('@vercel/blob');
+const { put, get } = require('@vercel/blob');
 
 const BLOB = 'bags.json';
 
@@ -14,10 +14,15 @@ module.exports = async (req, res) => {
   if (!r) return res.status(401).json({ error: 'bad key' });
 
   if (req.method === 'GET') {
-    const { blobs } = await list({ prefix: BLOB });
-    if (!blobs.length) return res.json({ role: r, bags: [] });
-    // ponytail: unique query busts the blob CDN cache so reads are always fresh
-    const bags = await (await fetch(`${blobs[0].url}?v=${Date.now()}`)).json();
+    // Private blob: only reachable with the store token, never by URL.
+    // useCache:false so a save is visible on the very next read.
+    let bags = [];
+    try {
+      const b = await get(BLOB, { access: 'private', useCache: false });
+      if (b && b.statusCode === 200) bags = JSON.parse(await new Response(b.stream).text());
+    } catch (e) {
+      if (e.name !== 'BlobNotFoundError') throw e;
+    }
     return res.json({ role: r, bags });
   }
 
@@ -25,7 +30,7 @@ module.exports = async (req, res) => {
     if (r !== 'edit') return res.status(403).json({ error: 'read only' });
     if (!Array.isArray(req.body)) return res.status(400).json({ error: 'bad body' });
     await put(BLOB, JSON.stringify(req.body, null, 2), {
-      access: 'public',
+      access: 'private',
       addRandomSuffix: false,
       allowOverwrite: true,
       contentType: 'application/json',
