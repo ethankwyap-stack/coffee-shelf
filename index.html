@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coffee Shelf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0a0705; --coal:#14100c; --card:#191410; --line:#2c231b;
+  --ink:#f2ece4; --dim:#9b8d7d; --faint:#5e5245;
+  --amber:#ff9d2e; --ember:#ff5f1f; --deep:#c2410c;
+  --green:#5fd68a; --grey:#6b6b6b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--void); color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+/* the single dominant glow */
+body::before{
+  content:""; position:fixed; inset:-30vh -20vw auto -20vw; height:90vh;
+  background:radial-gradient(50% 55% at 50% 40%, rgba(255,95,31,.20), rgba(255,157,46,.07) 45%, transparent 72%);
+  filter:blur(30px); pointer-events:none; z-index:0;
+}
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.25;
+  background-image:radial-gradient(rgba(255,255,255,.13) .5px, transparent .5px);
+  background-size:3px 3px; mix-blend-mode:overlay;
+}
+.wrap{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:0 22px 100px}
+
+/* ---------- header ---------- */
+header{padding:64px 0 26px}
+.kicker{font-size:11px; letter-spacing:.34em; text-transform:uppercase; color:var(--amber); margin:0 0 10px}
+h1{
+  font-family:'Bebas Neue',Impact,sans-serif; font-weight:400;
+  font-size:clamp(58px,12vw,150px); line-height:.83; letter-spacing:.005em;
+  margin:0; text-transform:uppercase;
+  background:linear-gradient(178deg,#fff8ef 8%,var(--amber) 58%,var(--deep) 105%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.sub{color:var(--dim); font-size:14px; margin:16px 0 0; max-width:46ch; line-height:1.6}
+
+/* ---------- stats ---------- */
+.stats{display:flex; flex-wrap:wrap; gap:34px; margin:38px 0 8px; padding:22px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.stat b{display:block; font-family:'Bebas Neue',sans-serif; font-size:34px; max-width:15ch; line-height:1; color:var(--ink)}
+.stat span{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint)}
+
+/* ---------- toolbar ---------- */
+.bar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:26px 0 30px}
+input,select,textarea{
+  background:var(--coal); border:1px solid var(--line); color:var(--ink);
+  border-radius:9px; padding:10px 13px; font:inherit; font-size:14px; outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--amber)}
+input::placeholder{color:var(--faint)}
+#q{flex:1; min-width:180px}
+button{font:inherit; cursor:pointer; border-radius:9px; border:1px solid var(--line);
+  background:var(--coal); color:var(--ink); padding:10px 16px; font-size:14px;
+  transition:.18s border-color,.18s background,.18s transform}
+button:hover{border-color:var(--amber)}
+button:active{transform:translateY(1px)}
+.primary{background:linear-gradient(160deg,var(--amber),var(--ember)); border:none; color:#160c02; font-weight:700;
+  box-shadow:0 6px 26px -8px rgba(255,95,31,.8)}
+.ghost{color:var(--dim)}
+
+/* ---------- shelf ---------- */
+.shelf{display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:18px}
+.bag{
+  position:relative; background:var(--card); border:1px solid var(--line);
+  border-radius:16px; padding:20px; cursor:pointer; overflow:hidden;
+  transition:.25s transform,.25s border-color,.25s box-shadow;
+}
+.bag:hover{transform:translateY(-4px); border-color:#4a3524; box-shadow:0 22px 44px -22px rgba(255,95,31,.55)}
+.bag::after{content:""; position:absolute; inset:auto -40% -60% -40%; height:120px;
+  background:radial-gradient(50% 100% at 50% 100%, rgba(255,95,31,.20), transparent 70%);
+  opacity:0; transition:.25s opacity}
+.bag:hover::after{opacity:1}
+.bag.finished{opacity:.45}
+.thumb{height:132px; border-radius:11px; margin:-4px 0 15px; background:#0f0b08 center/cover no-repeat;
+  border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif; font-size:40px; color:#31261c}
+.brand{font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--amber); margin-bottom:5px}
+.name{font-family:'Bebas Neue',sans-serif; font-size:27px; line-height:1.02; margin:0 0 9px; letter-spacing:.01em}
+.meta{font-size:12px; color:var(--dim); display:flex; flex-wrap:wrap; gap:5px 9px; margin-bottom:14px}
+.notes{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:14px}
+.chip{font-size:10.5px; padding:3px 9px; border-radius:99px; border:1px solid var(--line); color:var(--dim); background:#0f0b08}
+
+/* freshness */
+.fresh{margin-top:auto}
+.fresh .row{display:flex; justify-content:space-between; font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--faint); margin-bottom:6px}
+.track{height:5px; border-radius:99px; background:#241c15; overflow:hidden}
+.fill{height:100%; border-radius:99px; transition:width .6s cubic-bezier(.2,.8,.2,1)}
+
+.left{height:4px; border-radius:99px; background:#241c15; margin-top:10px; overflow:hidden}
+.left i{display:block; height:100%; background:linear-gradient(90deg,var(--deep),var(--amber))}
+
+.stars{color:var(--amber); font-size:12px; letter-spacing:2px}
+.empty{border:1px dashed var(--line); border-radius:16px; padding:56px 24px; text-align:center; color:var(--faint)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed; inset:0; z-index:40; background:rgba(4,2,1,.82); backdrop-filter:blur(7px);
+  display:flex; align-items:flex-start; justify-content:center; padding:34px 18px; overflow:auto}
+.sheet{background:var(--card); border:1px solid var(--line); border-radius:20px; padding:28px;
+  width:100%; max-width:600px; animation:rise .3s cubic-bezier(.2,.9,.2,1)}
+@keyframes rise{from{opacity:0; transform:translateY(22px) scale(.98)}}
+.sheet h2{font-family:'Bebas Neue',sans-serif; font-size:34px; margin:0 0 18px; letter-spacing:.01em}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+label{display:block; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); margin:0 0 6px}
+.f{margin-bottom:13px}
+.f input,.f select,.f textarea{width:100%}
+.actions{display:flex; gap:10px; justify-content:flex-end; margin-top:22px; flex-wrap:wrap}
+.danger{color:#ff7a6b; margin-right:auto}
+.hero{height:190px; border-radius:14px; background:#0f0b08 center/cover no-repeat; border:1px solid var(--line); margin-bottom:18px}
+.kv{display:grid; grid-template-columns:118px 1fr; gap:9px 14px; font-size:14px; margin-bottom:18px}
+.kv dt{color:var(--faint); font-size:10px; letter-spacing:.16em; text-transform:uppercase; padding-top:3px}
+.kv dd{margin:0; color:var(--ink)}
+.toast{position:fixed; z-index:60; bottom:26px; left:50%; transform:translateX(-50%);
+  background:var(--amber); color:#160c02; font-weight:700; font-size:13px; padding:11px 20px; border-radius:99px;
+  box-shadow:0 10px 34px -10px rgba(255,95,31,.9)}
+footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--line); color:var(--faint); font-size:12px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}.stats{gap:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker" id="kicker">The Shelf</p>
+    <h1>Coffee<br>Shelf</h1>
+    <p class="sub" id="sub">Every bag, how fresh it is, and what it tasted like.</p>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="bar">
+    <input id="q" placeholder="Search brand, origin, notes…">
+    <select id="fstatus">
+      <option value="">All bags</option>
+      <option value="open">Open</option>
+      <option value="unopened">Unopened</option>
+      <option value="finished">Finished</option>
+    </select>
+    <select id="sort">
+      <option value="fresh">Freshest first</option>
+      <option value="added">Recently added</option>
+      <option value="rating">Best rated</option>
+      <option value="brand">Brand A–Z</option>
+    </select>
+    <button id="share" class="ghost">Share</button>
+    <button id="add" class="primary">+ Add bag</button>
+  </div>
+
+  <div class="shelf" id="shelf"></div>
+  <footer>Coffee Shelf — <span id="foot"></span></footer>
+</div>
+
+<script>
+const KEY = new URLSearchParams(location.search).get('k') || '';
+let ROLE = 'view', BAGS = [];
+const $ = s => document.querySelector(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const days = d => d ? Math.max(0, Math.floor((Date.now() - new Date(d+'T12:00')) / 864e5)) : null;
+// Peak window is roughly day 4-21 after roast. After 45 days it's just brown water.
+function freshness(d){
+  const n = days(d);
+  if (n === null) return {pct:0, label:'No roast date', color:'var(--grey)'};
+  const pct = Math.max(0, 100 - (n/45)*100);
+  let color = 'var(--green)', label = n + (n===1?' day':' days') + ' old';
+  if (n < 4) { color = 'var(--amber)'; label += ' · resting'; }
+  else if (n <= 21) { color = 'var(--green)'; label += ' · peak'; }
+  else if (n <= 45) { color = 'var(--amber)'; label += ' · fading'; }
+  else { color = 'var(--grey)'; label += ' · stale'; }
+  return {pct, label, color, n};
+}
+const stars = r => r ? '★'.repeat(r) + '☆'.repeat(5-r) : '';
+
+async function load(){
+  if (!KEY) return locked('This shelf needs a link with a key. Ask Ethan for one.');
+  const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY));
+  if (!r.ok) return locked('That key is not valid.');
+  const d = await r.json();
+  ROLE = d.role; BAGS = d.bags || [];
+  if (ROLE !== 'edit') { $('#add').style.display='none'; $('#kicker').textContent = 'Shared shelf · read only'; }
+  render();
+  if (location.hash.startsWith('#bag=')) {
+    const b = BAGS.find(x => x.id === location.hash.slice(5));
+    if (b) view(b);
+  }
+}
+function locked(msg){
+  $('#shelf').innerHTML = '<div class="empty">'+esc(msg)+'</div>';
+  $('#add').style.display='none'; $('#share').style.display='none';
+}
+async function save(){
+  const r = await fetch('/api/bags?k=' + encodeURIComponent(KEY), {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(BAGS)
+  });
+  if (!r.ok) return toast('Save failed');
+  render();
+}
+function toast(m){
+  const t = document.createElement('div'); t.className='toast'; t.textContent=m;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 2200);
+}
+
+function visible(){
+  const q = $('#q').value.toLowerCase(), st = $('#fstatus').value, so = $('#sort').value;
+  let list = BAGS.filter(b => {
+    if (st && (b.status||'open') !== st) return false;
+    if (!q) return true;
+    return [b.brand,b.name,b.origin,b.region,b.process,b.roastLevel,b.brew,b.comment,(b.notes||[]).join(' ')]
+      .join(' ').toLowerCase().includes(q);
+  });
+  const f = b => freshness(b.roastDate).pct;
+  list.sort((a,b) => so==='rating' ? (b.rating||0)-(a.rating||0)
+    : so==='brand' ? String(a.brand||'').localeCompare(String(b.brand||''))
+    : so==='added' ? String(b.id).localeCompare(String(a.id))
+    : f(b)-f(a));
+  return list;
+}
+
+function render(){
+  // stats
+  const live = BAGS.filter(b => (b.status||'open') !== 'finished');
+  const spent = BAGS.reduce((s,b) => s + (+b.price||0), 0);
+  const gr = live.reduce((s,b) => s + (+b.gramsLeft || +b.sizeG || 0), 0);
+  const tally = {}; BAGS.forEach(b => b.brand && (tally[b.brand] = (tally[b.brand]||0)+1));
+  const fav = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0];
+  const rated = BAGS.filter(b => b.rating);
+  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : '—';
+  $('#stats').innerHTML = [
+    [live.length, 'On the shelf'],
+    [gr ? gr + 'g' : '—', 'Coffee left'],
+    ['$' + spent.toFixed(0), 'Total spent'],
+    [fav ? fav[0] : '—', 'Most bought'],
+    [avg, 'Avg rating'],
+  ].map(([v,l]) => `<div class="stat"><b>${esc(v)}</b><span>${l}</span></div>`).join('');
+  $('#foot').textContent = BAGS.length + ' bags logged';
+
+  const list = visible();
+  if (!list.length) { $('#shelf').innerHTML = '<div class="empty">Nothing here yet.</div>'; return; }
+  $('#shelf').innerHTML = list.map(b => {
+    const f = freshness(b.roastDate);
+    const pctLeft = b.sizeG ? Math.min(100, ((+b.gramsLeft ?? +b.sizeG) / +b.sizeG) * 100) : null;
+    return `<article class="bag ${(b.status||'open')==='finished'?'finished':''}" data-id="${b.id}">
+      <div class="thumb" style="${b.photo?`background-image:url('${b.photo}')`:''}">${b.photo?'':'☕'}</div>
+      <div class="brand">${esc(b.brand||'Unknown roaster')}</div>
+      <h3 class="name">${esc(b.name||b.origin||'Untitled')}</h3>
+      <div class="meta">
+        ${b.sizeG?`<span>${esc(b.sizeG)}g</span>`:''}
+        ${b.origin?`<span>· ${esc(b.origin)}</span>`:''}
+        ${b.roastLevel?`<span>· ${esc(b.roastLevel)}</span>`:''}
+        ${b.rating?`<span class="stars">${stars(b.rating)}</span>`:''}
+      </div>
+      ${(b.notes||[]).length?`<div class="notes">${b.notes.slice(0,4).map(n=>`<span class="chip">${esc(n)}</span>`).join('')}</div>`:''}
+      <div class="fresh">
+        <div class="row"><span>${esc(f.label)}</span><span>${Math.round(f.pct)}%</span></div>
+        <div class="track"><div class="fill" style="width:${f.pct}%;background:${f.color}"></div></div>
+        ${pctLeft!==null?`<div class="left"><i style="width:${pctLeft}%"></i></div>`:''}
+      </div>
+    </article>`;
+  }).join('');
+  document.querySelectorAll('.bag').forEach(el =>
+    el.onclick = () => view(BAGS.find(b => b.id === el.dataset.id)));
+}
+
+/* ---------- detail ---------- */
+function view(b){
+  const f = freshness(b.roastDate);
+  modal(`
+    <h2>${esc(b.name||b.brand||'Bag')}</h2>
+    ${b.photo?`<div class="hero" style="background-image:url('${b.photo}')"></div>`:''}
+    <dl class="kv">
+      ${row('Roaster', b.brand)}${row('Origin', [b.origin,b.region].filter(Boolean).join(' · '))}
+      ${row('Process', b.process)}${row('Roast level', b.roastLevel)}
+      ${row('Roasted', b.roastDate ? b.roastDate + ' (' + f.label + ')' : '')}
+      ${row('Size', b.sizeG ? b.sizeG + 'g' : '')}
+      ${row('Left', (b.gramsLeft??'') !== '' ? b.gramsLeft + 'g' : '')}
+      ${row('Price', b.price ? '$'+(+b.price).toFixed(2) + (b.sizeG ? ' · $'+((+b.price/+b.sizeG)*10).toFixed(2)+'/10g' : '') : '')}
+      ${row('Tasting notes', (b.notes||[]).join(', '))}
+      ${row('Best brew', b.brew)}${row('Status', b.status)}
+      ${row('Rating', b.rating ? stars(b.rating) : '')}
+      ${row('My note', b.comment)}
+    </dl>
+    <div class="actions">
+      <button class="ghost" onclick="copyLink('${b.id}')">Copy link to this bag</button>
+      ${ROLE==='edit'?`<button onclick="edit('${b.id}')">Edit</button>`:''}
+      <button class="primary" onclick="closeModal()">Close</button>
+    </div>`);
+  history.replaceState(null,'','#bag='+b.id);
+}
+const row = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
+
+function copyLink(id){
+  navigator.clipboard.writeText(location.origin + location.pathname + location.search + '#bag=' + id);
+  toast('Link copied');
+}
+
+/* ---------- edit ---------- */
+function edit(id){
+  const b = BAGS.find(x=>x.id===id) || {id:uid(), status:'open', notes:[]};
+  const sel = (v,opts) => opts.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('');
+  modal(`
+    <h2>${id?'Edit bag':'New bag'}</h2>
+    <div class="grid2">
+      <div class="f"><label>Roaster / brand</label><input id="e_brand" value="${esc(b.brand||'')}"></div>
+      <div class="f"><label>Coffee name</label><input id="e_name" value="${esc(b.name||'')}"></div>
+      <div class="f"><label>Origin country</label><input id="e_origin" value="${esc(b.origin||'')}"></div>
+      <div class="f"><label>Region / farm</label><input id="e_region" value="${esc(b.region||'')}"></div>
+      <div class="f"><label>Roast date</label><input id="e_roastDate" type="date" value="${esc(b.roastDate||'')}"></div>
+      <div class="f"><label>Roast level</label><select id="e_roastLevel">${sel(b.roastLevel,['','Light','Medium-light','Medium','Medium-dark','Dark'])}</select></div>
+      <div class="f"><label>Process</label><select id="e_process">${sel(b.process,['','Washed','Natural','Honey','Anaerobic','Decaf','Other'])}</select></div>
+      <div class="f"><label>Bag size (g)</label><input id="e_sizeG" type="number" value="${esc(b.sizeG||'')}"></div>
+      <div class="f"><label>Grams left</label><input id="e_gramsLeft" type="number" value="${esc(b.gramsLeft??'')}"></div>
+      <div class="f"><label>Price ($)</label><input id="e_price" type="number" step="0.01" value="${esc(b.price||'')}"></div>
+      <div class="f"><label>Best brew method</label><input id="e_brew" value="${esc(b.brew||'')}"></div>
+      <div class="f"><label>Status</label><select id="e_status">${sel(b.status||'open',['unopened','open','finished'])}</select></div>
+      <div class="f"><label>Rating (0-5)</label><input id="e_rating" type="number" min="0" max="5" value="${esc(b.rating||'')}"></div>
+      <div class="f"><label>Photo of the bag</label><input id="e_photo" type="file" accept="image/*"></div>
+    </div>
+    <div class="f"><label>Tasting notes (commas)</label><input id="e_notes" value="${esc((b.notes||[]).join(', '))}"></div>
+    <div class="f"><label>My note</label><textarea id="e_comment" rows="3">${esc(b.comment||'')}</textarea></div>
+    <div class="actions">
+      ${id?`<button class="danger" onclick="del('${b.id}')">Delete</button>`:''}
+      <button class="ghost" onclick="closeModal()">Cancel</button>
+      <button class="primary" onclick="commit('${b.id}')">Save</button>
+    </div>`);
+  window._photo = b.photo || '';
+  $('#e_photo').onchange = e => shrink(e.target.files[0], d => window._photo = d);
+}
+
+// Shrink to 700px wide JPEG so the whole shelf stays a small JSON file.
+function shrink(file, cb){
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const s = Math.min(1, 700 / img.width);
+    const c = document.createElement('canvas');
+    c.width = img.width*s; c.height = img.height*s;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    cb(c.toDataURL('image/jpeg', .72));
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+function commit(id){
+  const g = k => $('#e_'+k).value.trim();
+  const bag = {
+    id: id || uid(),
+    brand:g('brand'), name:g('name'), origin:g('origin'), region:g('region'),
+    roastDate:g('roastDate'), roastLevel:g('roastLevel'), process:g('process'),
+    sizeG:g('sizeG')?+g('sizeG'):'', gramsLeft:g('gramsLeft')!==''?+g('gramsLeft'):'',
+    price:g('price')?+g('price'):'', brew:g('brew'), status:g('status'),
+    rating:g('rating')?+g('rating'):'', comment:g('comment'),
+    notes:g('notes').split(',').map(s=>s.trim()).filter(Boolean),
+    photo: window._photo || ''
+  };
+  const i = BAGS.findIndex(x=>x.id===bag.id);
+  i>=0 ? BAGS[i]=bag : BAGS.unshift(bag);
+  closeModal(); save(); toast('Saved');
+}
+function del(id){
+  if (!confirm('Delete this bag for good?')) return;
+  BAGS = BAGS.filter(b=>b.id!==id); closeModal(); save(); toast('Deleted');
+}
+
+/* ---------- modal plumbing ---------- */
+function modal(html){
+  closeModal();
+  const s = document.createElement('div'); s.className='scrim'; s.id='scrim';
+  s.innerHTML = '<div class="sheet">'+html+'</div>';
+  s.onclick = e => { if (e.target === s) closeModal(); };
+  document.body.appendChild(s);
+}
+function closeModal(){
+  const s = $('#scrim'); if (s) s.remove();
+  if (location.hash) history.replaceState(null,'',location.pathname+location.search);
+}
+document.onkeydown = e => e.key==='Escape' && closeModal();
+
+$('#add').onclick = () => edit('');
+$('#q').oninput = render; $('#fstatus').onchange = render; $('#sort').onchange = render;
+$('#share').onclick = () => {
+  const v = prompt('Paste your family VIEW key to build a share link:');
+  if (!v) return;
+  navigator.clipboard.writeText(location.origin + location.pathname + '?k=' + encodeURIComponent(v));
+  toast('Share link copied');
+};
+load();
+</script>
+</body>
+</html>
