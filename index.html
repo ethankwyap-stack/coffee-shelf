@@ -74,6 +74,7 @@ button:active{transform:translateY(1px)}
 .bag{
   position:relative; background:var(--card); border:1px solid var(--line);
   border-radius:16px; padding:20px; cursor:pointer; overflow:hidden;
+  display:flex; flex-direction:column;
   transition:.25s transform,.25s border-color,.25s box-shadow;
 }
 .bag:hover{transform:translateY(-4px); border-color:#4a3524; box-shadow:0 22px 44px -22px rgba(255,95,31,.55)}
@@ -100,6 +101,19 @@ button:active{transform:translateY(1px)}
 
 .left{height:4px; border-radius:99px; background:#241c15; margin-top:10px; overflow:hidden}
 .left i{display:block; height:100%; background:linear-gradient(90deg,var(--deep),var(--amber))}
+.leftrow{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:11px}
+.leftrow .amt{font-size:11px; color:var(--dim); letter-spacing:.03em}
+.leftrow .amt b{color:var(--ink); font-weight:700}
+.brew{border:1px solid #4a3524; background:#1f1710; color:var(--amber); font-size:12px;
+  padding:5px 11px; border-radius:99px; line-height:1; white-space:nowrap}
+.brew:hover{background:var(--amber); color:#160c02; border-color:var(--amber)}
+.brew:disabled{opacity:.3; cursor:not-allowed}
+.brew.pop{animation:pop .35s ease}
+@keyframes pop{40%{transform:scale(1.18)}}
+.doseset{display:flex; gap:8px; align-items:center; margin:-4px 0 18px; flex-wrap:wrap}
+.doseset button{padding:8px 14px; font-size:13px}
+.toast button{background:none; border:none; color:#160c02; font:inherit; font-weight:800;
+  text-decoration:underline; cursor:pointer; padding:0 0 0 12px}
 
 .stars{color:var(--amber); font-size:12px; letter-spacing:2px}
 .empty{border:1px dashed var(--line); border-radius:16px; padding:56px 24px; text-align:center; color:var(--faint)}
@@ -164,6 +178,7 @@ footer{margin-top:60px; padding-top:22px; border-top:1px solid var(--line); colo
 const KEY = new URLSearchParams(location.search).get('k') || '';
 let ROLE = 'view', BAGS = [];
 const $ = s => document.querySelector(s);
+const DOSE = b => +b.dose || 18;   // grams used per brew
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -206,9 +221,34 @@ async function save(){
   if (!r.ok) return toast('Save failed');
   render();
 }
-function toast(m){
+// One tap = one brew off the bag. Always undoable.
+let _undo = null;
+function pour(id, delta){
+  const b = BAGS.find(x => x.id === id); if (!b) return;
+  const size = +b.sizeG || 0;
+  const before = (b.gramsLeft ?? '') !== '' ? +b.gramsLeft : size;
+  const after = Math.max(0, size ? Math.min(size, before + delta) : before + delta);
+  if (after === before) return;
+  _undo = { id, gramsLeft: b.gramsLeft, status: b.status };
+  b.gramsLeft = after;
+  if (after === 0) b.status = 'finished';
+  else if (b.status !== 'open') b.status = 'open';
+  save();
+  toast(after === 0 ? 'Empty \u2014 marked finished' : after + 'g left', true);
+}
+function undoPour(){
+  if (!_undo) return;
+  const b = BAGS.find(x => x.id === _undo.id);
+  if (b) { b.gramsLeft = _undo.gramsLeft; b.status = _undo.status; save(); }
+  _undo = null; toast('Undone');
+}
+
+function toast(m, undo){
+  document.querySelectorAll('.toast').forEach(x => x.remove());
   const t = document.createElement('div'); t.className='toast'; t.textContent=m;
-  document.body.appendChild(t); setTimeout(()=>t.remove(), 2200);
+  if (undo) { const u = document.createElement('button'); u.textContent = 'Undo';
+    u.onclick = () => { t.remove(); undoPour(); }; t.appendChild(u); }
+  document.body.appendChild(t); setTimeout(() => t.remove(), undo ? 5000 : 2200);
 }
 
 function visible(){
@@ -249,7 +289,8 @@ function render(){
   if (!list.length) { $('#shelf').innerHTML = '<div class="empty">Nothing here yet.</div>'; return; }
   $('#shelf').innerHTML = list.map(b => {
     const f = freshness(b.roastDate);
-    const pctLeft = b.sizeG ? Math.min(100, ((+b.gramsLeft ?? +b.sizeG) / +b.sizeG) * 100) : null;
+    const left = (b.gramsLeft ?? '') !== '' ? +b.gramsLeft : (b.sizeG ? +b.sizeG : null);
+    const pctLeft = b.sizeG && left !== null ? Math.min(100, (left / +b.sizeG) * 100) : null;
     return `<article class="bag ${(b.status||'open')==='finished'?'finished':''}" data-id="${b.id}">
       <div class="thumb" style="${b.photo?`background-image:url('${b.photo}')`:''}">${b.photo?'':'☕'}</div>
       <div class="brand">${esc(b.brand||'Unknown roaster')}</div>
@@ -265,11 +306,20 @@ function render(){
         <div class="row"><span>${esc(f.label)}</span><span>${Math.round(f.pct)}%</span></div>
         <div class="track"><div class="fill" style="width:${f.pct}%;background:${f.color}"></div></div>
         ${pctLeft!==null?`<div class="left"><i style="width:${pctLeft}%"></i></div>`:''}
+        ${left!==null?`<div class="leftrow">
+          <span class="amt"><b>${left}g</b> left \u00b7 ${Math.floor(left/DOSE(b))} brews</span>
+          ${ROLE==='edit'?`<button class="brew" data-brew="${b.id}" ${left<=0?'disabled':''}>\u2615 \u2212${DOSE(b)}g</button>`:''}
+        </div>`:''}
       </div>
     </article>`;
   }).join('');
   document.querySelectorAll('.bag').forEach(el =>
     el.onclick = () => view(BAGS.find(b => b.id === el.dataset.id)));
+  document.querySelectorAll('[data-brew]').forEach(el => el.onclick = e => {
+    e.stopPropagation();                       // don't open the detail card
+    el.classList.add('pop');
+    pour(el.dataset.brew, -DOSE(BAGS.find(b => b.id === el.dataset.brew)));
+  });
 }
 
 /* ---------- detail ---------- */
@@ -278,12 +328,20 @@ function view(b){
   modal(`
     <h2>${esc(b.name||b.brand||'Bag')}</h2>
     ${b.photo?`<div class="hero" style="background-image:url('${b.photo}')"></div>`:''}
+    ${ROLE==='edit'&&b.sizeG?`<div class="doseset">
+      <button onclick="quick('${b.id}',-DOSE(BAGS.find(x=>x.id==='${b.id}')))">\u2615 Brewed one</button>
+      <button onclick="quick('${b.id}',-5)">\u22125g</button>
+      <button onclick="quick('${b.id}',5)">+5g</button>
+      <button onclick="quick('${b.id}','full')">Refill</button>
+      <button onclick="quick('${b.id}','empty')">Empty</button>
+    </div>`:''}
     <dl class="kv">
       ${row('Roaster', b.brand)}${row('Origin', [b.origin,b.region].filter(Boolean).join(' · '))}
       ${row('Process', b.process)}${row('Roast level', b.roastLevel)}
       ${row('Roasted', b.roastDate ? b.roastDate + ' (' + f.label + ')' : '')}
       ${row('Size', b.sizeG ? b.sizeG + 'g' : '')}
-      ${row('Left', (b.gramsLeft??'') !== '' ? b.gramsLeft + 'g' : '')}
+      ${row('Left', (b.gramsLeft??'') !== '' ? b.gramsLeft + 'g \u00b7 ' + Math.floor(+b.gramsLeft/DOSE(b)) + ' brews' : '')}
+      ${row('Dose per brew', DOSE(b) + 'g')}
       ${row('Price', b.price ? '$'+(+b.price).toFixed(2) + (b.sizeG ? ' · $'+((+b.price/+b.sizeG)*10).toFixed(2)+'/10g' : '') : '')}
       ${row('Tasting notes', (b.notes||[]).join(', '))}
       ${row('Best brew', b.brew)}${row('Status', b.status)}
@@ -296,6 +354,14 @@ function view(b){
       <button class="primary" onclick="closeModal()">Close</button>
     </div>`);
   history.replaceState(null,'','#bag='+b.id);
+}
+function quick(id, what){
+  const b = BAGS.find(x => x.id === id); if (!b) return;
+  const size = +b.sizeG || 0;
+  const cur = (b.gramsLeft ?? '') !== '' ? +b.gramsLeft : size;
+  const delta = what === 'full' ? size - cur : what === 'empty' ? -cur : what;
+  pour(id, delta);
+  view(BAGS.find(x => x.id === id));   // repaint the open card with the new number
 }
 const row = (k,v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '';
 
@@ -320,6 +386,7 @@ function edit(id){
       <div class="f"><label>Process</label><select id="e_process">${sel(b.process,['','Washed','Natural','Honey','Anaerobic','Decaf','Other'])}</select></div>
       <div class="f"><label>Bag size (g)</label><input id="e_sizeG" type="number" value="${esc(b.sizeG||'')}"></div>
       <div class="f"><label>Grams left</label><input id="e_gramsLeft" type="number" value="${esc(b.gramsLeft??'')}"></div>
+      <div class="f"><label>Dose per brew (g)</label><input id="e_dose" type="number" value="${esc(b.dose||'')}" placeholder="18"></div>
       <div class="f"><label>Price ($)</label><input id="e_price" type="number" step="0.01" value="${esc(b.price||'')}"></div>
       <div class="f"><label>Best brew method</label><input id="e_brew" value="${esc(b.brew||'')}"></div>
       <div class="f"><label>Status</label><select id="e_status">${sel(b.status||'open',['unopened','open','finished'])}</select></div>
@@ -353,12 +420,15 @@ function shrink(file, cb){
 
 function commit(id){
   const g = k => $('#e_'+k).value.trim();
+  const prev = BAGS.find(x => x.id === id) || {};
   const bag = {
+    ...prev,                       // keep any field this form does not show
     id: id || uid(),
     brand:g('brand'), name:g('name'), origin:g('origin'), region:g('region'),
     roastDate:g('roastDate'), roastLevel:g('roastLevel'), process:g('process'),
     sizeG:g('sizeG')?+g('sizeG'):'', gramsLeft:g('gramsLeft')!==''?+g('gramsLeft'):'',
     price:g('price')?+g('price'):'', brew:g('brew'), status:g('status'),
+    dose:g('dose')?+g('dose'):'',
     rating:g('rating')?+g('rating'):'', comment:g('comment'),
     notes:g('notes').split(',').map(s=>s.trim()).filter(Boolean),
     photo: window._photo || ''
