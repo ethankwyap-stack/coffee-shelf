@@ -4,6 +4,16 @@ Live: https://coffee-shelf-smoky.vercel.app
 
 Personal coffee-bag tracker. `~/coffee-shelf`. Zero cost.
 
+## Layout
+- `index.html` — the whole app (vanilla JS, no build step)
+- `api/bags.js` — Vercel serverless fn: key check, blob read/write, backups, wipe guard
+- `server.js` — local dev on :4703 against a local `bags.json`
+- `backup.sh` — pull live data into `backups/` (run before any risky change)
+- `tests/run.sh` — starts local server + headless Chrome, seeds from newest backup, runs a test
+- `tests/test-save-safety.js` — key handling, URL stripping, offline rollback
+- `tests/test-brew-tracking.js` — brew button, dose math, undo, persistence
+- `docs/` — stage screenshots
+
 ## Stack
 - `index.html` — the whole app. Vanilla JS, no build step, no framework.
 - `api/bags.js` — Vercel serverless function. Vercel Blob stores `bags.json`.
@@ -36,3 +46,6 @@ The API returns `{role, bags}`; the UI hides Add/Edit when role is `view`.
 - Never assign `document.onkeydown = e => cond && fn()`. An arrow function returning
   `false` cancels the key event, which silently blocks ALL typing in every input.
   Use `addEventListener` with a braced body.
+- Tests need `ws` (devDependency) and Google Chrome at the standard /Applications path.
+  They seed `bags.json` from the newest file in `backups/`, so run `./backup.sh` first
+  if you want them exercising current data.

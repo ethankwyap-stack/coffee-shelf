@@ -3,5 +3,8 @@
   "private": true,
   "dependencies": {
     "@vercel/blob": "^2.8.0"
+  },
+  "devDependencies": {
+    "ws": "^8.21.3"
   }
 }
